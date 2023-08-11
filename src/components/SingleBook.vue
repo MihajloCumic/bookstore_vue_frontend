@@ -3,7 +3,7 @@
     <img v-if="book.image" :src="book.image" alt="" />
     <img v-else src="../assets/no_image.jpg" alt="" />
     <h3>{{ book.title }}</h3>
-    <h5>{{ book.author }}</h5>
+    <h5 v-if="book.author">{{ book.author.name }} {{ book.author.surname }}</h5>
     <h4 v-if="book.saleID">
       <b-badge class="sale">Sale</b-badge>
       <span class="sale-price">{{ book.price }}$</span> <span>25$</span>
@@ -13,6 +13,7 @@
 </template>
 
 <script>
+import { fetchAuthorById } from "@/store/store_api_calls";
 export default {
   name: "SingleBook",
   props: {
@@ -25,6 +26,16 @@ export default {
         params: { id: this.book.id, title: this.book.title },
       });
     },
+  },
+  async mounted() {
+    if (this.book && !this.book.author) {
+      const res = await fetch(
+        `http://localhost:7000/author/${this.book.authorID}`
+      );
+      const author = await res.json();
+      this.book["author"] = author[0];
+      this.$forceUpdate();
+    }
   },
 };
 </script>
