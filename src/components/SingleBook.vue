@@ -4,20 +4,25 @@
     <img v-else src="../assets/no_image.jpg" alt="" />
     <h3>{{ book.title }}</h3>
     <h5 v-if="book.author">{{ book.author.name }} {{ book.author.surname }}</h5>
-    <h4 v-if="book.saleID">
-      <b-badge class="sale">Sale</b-badge>
-      <span class="sale-price">{{ book.price }}$</span> <span>25$</span>
+    <h4 v-if="book.saleID && book.discount">
+      <b-badge class="sale">{{ book.discount }}% Sale</b-badge>
+      <span class="sale-price">{{ book.price }}$</span>
+      <span>{{ book.price - (book.price * book.discount) / 100 }}$</span>
     </h4>
     <h4 v-else>{{ book.price }}$</h4>
   </div>
 </template>
 
 <script>
-import { fetchAuthorById } from "@/store/store_api_calls";
+import { fetchAuthorById, fetchSaleById } from "@/store/store_api_calls";
+import { mapState } from "vuex";
 export default {
   name: "SingleBook",
   props: {
     book: Object,
+  },
+  computed: {
+    ...mapState(["currBooks"]),
   },
   methods: {
     toSingleView() {
@@ -28,14 +33,39 @@ export default {
     },
   },
   async mounted() {
-    if (this.book && !this.book.author) {
-      const res = await fetch(
-        `http://localhost:7000/author/${this.book.authorID}`
-      );
-      const author = await res.json();
-      this.book["author"] = author[0];
+    if (this.book) {
+      const author = await fetchAuthorById(this.book.authorID);
+      this.book["author"] = {
+        name: author[0].name,
+        surname: author[0].surname,
+      };
+      if (this.book.saleID) {
+        const sale = await fetchSaleById(this.book.saleID);
+        if (!sale.error) {
+          this.book["discount"] = sale[0].discount;
+        }
+      }
       this.$forceUpdate();
     }
+  },
+
+  watch: {
+    async book(nVal) {
+      if (this.book) {
+        const author = await fetchAuthorById(this.book.authorID);
+        this.book["author"] = {
+          name: author[0].name,
+          surname: author[0].surname,
+        };
+        if (this.book.saleID) {
+          const sale = await fetchSaleById(this.book.saleID);
+          if (!sale.error) {
+            this.book["discount"] = sale[0].discount;
+          }
+        }
+        this.$forceUpdate();
+      }
+    },
   },
 };
 </script>
@@ -43,17 +73,28 @@ export default {
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
 .singlebook {
-  border-style: solid;
-  border-width: 4px;
-  border-color: black;
+  color: var(myBlack);
+  border-top-style: solid;
+  border-bottom-style: solid;
+  border-width: 5px;
+  border-radius: 10px;
+  border-color: var(--dark-blue);
+  background-color: var(--light-blue2);
   cursor: pointer;
 }
 
-h3,
+.singlebook:hover {
+  border-color: var(--coral);
+}
+
+img {
+  border-radius: 10px 10px 0px 0px;
+}
+
 h4 {
   border-top-style: solid;
-  border-width: 2px;
-  border-color: black;
+  border-width: 3px;
+  border-color: var(--ivory);
 }
 .sale {
   color: white;

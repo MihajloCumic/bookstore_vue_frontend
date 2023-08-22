@@ -35,6 +35,36 @@ const routes = [
     name: "giftcard",
     component: () => import("../views/GiftCardView.vue"),
   },
+  {
+    path: "/sale",
+    name: "sale",
+    component: () => import("../views/SalesView.vue"),
+  },
+  {
+    path: "/login",
+    name: "login",
+    component: () => import("../views/LoginView.vue"),
+  },
+  {
+    path: "/register",
+    name: "register",
+    component: () => import("../views/RegisterView.vue"),
+  },
+  {
+    path: "/wishlist",
+    name: "wishlist",
+    component: () => import("../views/WishListView.vue"),
+  },
+  {
+    path: "/cart",
+    name: "cart",
+    component: () => import("../views/CartView.vue"),
+  },
+  {
+    path: "/order",
+    name: "order",
+    component: () => import("../views/OrderView.vue"),
+  },
 ];
 
 const router = new VueRouter({

@@ -1,14 +1,15 @@
 <template>
-  <div class="booklist">
+  <div class="bookgrid">
     <div class="paggination">
       <b-pagination
+        class="customPagination"
         v-model="currentPage"
         :total-rows="rows"
         :per-page="perPage"
         aria-controls="books"
       ></b-pagination>
     </div>
-    <b-container>
+    <b-container class="booksContainer">
       <b-row v-for="x in rowNum" :key="x">
         <b-col class="kolona" v-for="y in colNum" :key="y">
           <SingleBook
@@ -31,6 +32,7 @@
     </b-container>
     <div class="paggination">
       <b-pagination
+        class="customPagination"
         v-model="currentPage"
         :total-rows="rows"
         :per-page="perPage"
@@ -81,10 +83,19 @@ export default {
 </script>
 
 <style scoped>
+.booksContainer {
+  padding: 10px;
+  margin-bottom: 10px;
+  border-top-style: solid;
+  border-bottom-style: solid;
+  border-width: 2px;
+  border-color: var(--coral);
+}
 .paggination {
   display: flex;
   justify-content: center;
 }
+
 .kolona {
   margin-bottom: 20px;
 }

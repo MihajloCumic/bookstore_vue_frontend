@@ -1,6 +1,7 @@
 import Vue from "vue";
 import Vuex from "vuex";
 import apiCalls from "@/store/store_api_calls";
+import login_register from "./login_register";
 
 Vue.use(Vuex);
 
@@ -23,6 +24,11 @@ export default new Vuex.Store({
     books: [],
     currBooks: [],
     toplists: [],
+    sales: [],
+    token: "",
+    wishlist: [],
+    wishlistId: null,
+    cartBooks: [],
   },
   mutations: {
     addBooks(state, books) {
@@ -34,6 +40,39 @@ export default new Vuex.Store({
     addTopLists(state, toplists) {
       state.toplists = toplists;
     },
+    addSales(state, sales) {
+      state.sales = sales;
+    },
+    setWishListId(state, wishlistId) {
+      state.wishlistId = wishlistId;
+    },
+    setToken(state, token) {
+      state.token = token;
+      //localstorage?
+    },
+    removeToken(state) {
+      state.token = "";
+      //localstorage?
+    },
+    addBookToCart(state, book) {
+      state.cartBooks.push(book);
+    },
+    removeBookFromCart(state, book) {
+      const index = state.cartBooks.findIndex((obj) => obj.id == book.id);
+      state.cartBooks.splice(index, 1);
+    },
+    updateQuantityOfBook(state, book) {
+      const bookExists = state.cartBooks.filter((obj) => obj.id == book.id)[0];
+      if (bookExists) {
+        bookExists.quantity = bookExists.quantity + book.quantity;
+      }
+    },
+    addBooksToWishList(state, books) {
+      state.wishlist.push(...books);
+    },
+    removeBooksFromWishList(state) {
+      state.wishlist = [];
+    },
     addBooksIdsToCategory(state, obj) {
       const category = state.categories.filter(
         (ctg) => ctg.id == obj.categoryId
@@ -44,16 +83,65 @@ export default new Vuex.Store({
       const toplist = state.toplists.filter((tl) => tl.id == obj.toplistId)[0];
       toplist["booksIds"] = obj.booksIds;
     },
+    addBooksIdsToSale(state, obj) {
+      const sale = state.sales.filter((sl) => sl.id == obj.saleId)[0];
+      sale["booksIds"] = obj.booksIds;
+    },
     replaceCurrBooks(state, books) {
       state.currBooks = books;
     },
   },
   actions: {
+    async register({ commit }, obj) {
+      const token = await login_register.register(obj);
+      if (token.error) {
+        return { error: token.error };
+      }
+      commit("setWishListId", token.wishlistId);
+      const wishlist = await apiCalls.fetchBooksByWishList(token.wishlistId);
+      if (wishlist[0].Books.length > 0) {
+        commit("addBooksToWishList", wishlist[0].Books);
+      }
+      commit("setToken", token.token);
+      return { success: true };
+    },
+    async login({ commit }, obj) {
+      const token = await login_register.login(obj);
+      if (token.error) {
+        return { error: token.error };
+      }
+      commit("setWishListId", token.wishlistId);
+      const wishlist = await apiCalls.fetchBooksByWishList(token.wishlistId);
+      if (wishlist[0].Books.length > 0) {
+        commit("addBooksToWishList", wishlist[0].Books);
+      }
+      commit("setToken", token.token);
+      return { success: true };
+    },
+    logoutAction({ commit }) {
+      commit("setWishListId", null);
+      commit("removeBooksFromWishList");
+      commit("removeToken");
+    },
+    addWishListBooksToCurrBooks({ commit, state }) {
+      commit("replaceCurrBooks", state.wishlist);
+    },
+    addBookToCartAction({ commit, state }, book) {
+      const bookExists = state.cartBooks.filter((obj) => obj.id == book.id)[0];
+      if (bookExists) {
+        commit("updateQuantityOfBook", book);
+        return;
+      }
+      commit("addBookToCart", book);
+    },
+    removeBookFromCartAction({ commit }, book) {
+      commit("removeBookFromCart", book);
+    },
     async fetchCategories({ commit, state }) {
       const res = await fetch(`${url}/category`);
       const obj = await res.json();
       if (obj.error) {
-        console.log(error);
+        console.log(obj.error);
         return;
       }
       commit("addCategories", obj);
@@ -62,10 +150,18 @@ export default new Vuex.Store({
       const res = await fetch(`${url}/toplist`);
       const obj = await res.json();
       if (obj.error) {
-        console.log(error);
+        console.log(obj.error);
         return;
       }
       commit("addTopLists", obj);
+    },
+    async fetchSales({ commit }) {
+      const sales = await apiCalls.fetchAllSales();
+      if (sales.error) {
+        console.log(sales.error);
+        return;
+      }
+      commit("addSales", sales);
     },
     async fetchBooksByCategory({ commit, state, dispatch }, categoryId) {
       if (state.categories.length == 0) await dispatch("fetchCategories");
@@ -90,10 +186,7 @@ export default new Vuex.Store({
       const booksIds = obj[0].Books.map((book) => book.id);
 
       commit("addBooksIdsToCategory", { categoryId, booksIds });
-      //author****************************************************
-      addAuthors(obj[0].Books);
 
-      //author****************************************************
       commit("addBooks", obj[0].Books);
       commit("replaceCurrBooks", obj[0].Books);
     },
@@ -113,11 +206,31 @@ export default new Vuex.Store({
         commit("replaceCurrBooks", obj[0].Books);
         return;
       }
-      //add authors****************
-      await addAuthors(obj[0].Books);
-      //**************************
+
       commit("addBooksIdsToTopList", { toplistId, booksIds });
       commit("replaceCurrBooks", obj[0].Books);
+    },
+    async fetchBooksBySale({ commit, state, dispatch }, saleId) {
+      if (state.sales.length == 0) await dispatch("fetchSales");
+
+      const sale = state.sales.filter((tl) => tl.id == saleId)[0];
+
+      if (sale && sale["booksIds"]) {
+        return;
+      }
+
+      const res = await fetch(`${url}/sale/${saleId}`);
+      const obj = await res.json();
+      if (obj.error) {
+        console.log(obj.error);
+        return;
+      }
+      if (!obj[0]) {
+        return;
+      }
+      const booksIds = obj[0].Books.map((book) => book.id);
+
+      commit("addBooksIdsToSale", { saleId, booksIds });
     },
     async fetchAllBooks({ commit, state }) {
       const res = await fetch(`${url}/book`);
@@ -126,9 +239,7 @@ export default new Vuex.Store({
         console.log(error);
         return;
       }
-      //add authors****************
-      await addAuthors(obj);
-      //**************************
+
       commit("replaceCurrBooks", obj);
     },
     getBookById({ commit, state }, id) {
@@ -144,9 +255,6 @@ export default new Vuex.Store({
           reject(obj.error);
           return;
         }
-        //add authors****************
-        await addAuthors([obj]);
-        //**************************
         resolve(obj);
       });
     },

@@ -1,6 +1,6 @@
 <template>
-  <div class="book">
-    <h1>All Books</h1>
+  <div class="wishlist">
+    <h1>Wishlist</h1>
     <BookGrid />
   </div>
 </template>
@@ -9,15 +9,15 @@
 import BookGrid from "@/components/BookGrid.vue";
 import { mapActions } from "vuex";
 export default {
-  name: "BookView",
+  name: "WishListView",
   components: {
     BookGrid,
   },
   methods: {
-    ...mapActions(["fetchAllBooks"]),
+    ...mapActions(["addWishListBooksToCurrBooks"]),
   },
   mounted() {
-    this.fetchAllBooks();
+    this.addWishListBooksToCurrBooks();
   },
 };
 </script>
